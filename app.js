@@ -28,11 +28,11 @@ const CARD_MAX_H = 680;
 
 // X positions — outer cards shift right (the arc curves away)
 const CENTER_X = CW / 2;          // 270 — dead center
-const OUTER_X  = CW / 2 + 62;     // 332 — outer cards on the arc (more curve)
+const OUTER_X  = CW / 2 - 62;     // 208 — outer cards arc to the LEFT
 
 // Y positions — outer cards well separated from center, just a thin peek visible
 // ~80px visible strip per outer card, ~190px clear gap to center card edges
-const PREV_Y   = 40;               // top card: thin strip peeking from top
+const PREV_Y   = 65;               // top card: slightly lower peek
 const CENTER_Y = 480;
 const NEXT_Y   = 920;              // bottom card: thin strip peeking from bottom
 
@@ -54,7 +54,7 @@ const FULL_PERSP   = 1.00;   // fullscreen — completely flat
 // Z rotation — subtle lean following the drum tangent
 const PREV_ROT     = -0.10;  // ~-5.7° — leans back going over top
 const NEXT_ROT     =  0.10;  // ~+5.7° — leans forward coming up
-const CENTER_ROT   = -0.025; // barely anything — almost straight
+const CENTER_ROT   = -0.072;  // aligns with top card arc direction
 const FULL_ROT     =  0.00;  // fullscreen — straight
 
 // Glow on center card
