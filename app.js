@@ -48,13 +48,13 @@ const NEXT_ALPHA   = 0.55;
 // Perspective Y squish — heavy on outer cards = barrel/drum depth
 const PREV_PERSP   = 0.28;   // very squished — thin edge sliver
 const NEXT_PERSP   = 0.28;
-const CENTER_PERSP = 0.90;   // nearly flat — facing the viewer
+const CENTER_PERSP = 0.97;  // nearly flat — front of arc faces viewer
 const FULL_PERSP   = 1.00;   // fullscreen — completely flat
 
 // Z rotation — subtle lean following the drum tangent
-const PREV_ROT     = -0.10;  // ~-5.7° — leans back going over top
-const NEXT_ROT     =  0.10;  // ~+5.7° — leans forward coming up
-const CENTER_ROT   = -0.072;  // aligns with top card arc direction
+const PREV_ROT     = -0.26;  // strong left lean — curving away over top
+const NEXT_ROT     =  0.26;  // strong right lean — curving away below
+const CENTER_ROT   =  0.00;  // upright — facing viewer at arc front
 const FULL_ROT     =  0.00;  // fullscreen — straight
 
 // Glow on center card
