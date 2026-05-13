@@ -28,12 +28,13 @@ const CARD_MAX_H = 680;
 
 // X positions — outer cards shift right (the arc curves away)
 const CENTER_X = CW / 2;          // 270 — dead center
-const OUTER_X  = CW / 2 + 48;     // 318 — outer cards on the arc
+const OUTER_X  = CW / 2 + 62;     // 332 — outer cards on the arc (more curve)
 
-// Y positions — tighter vertical spread than before
-const PREV_Y   = 172;
+// Y positions — outer cards pushed mostly off-screen, just a sliver visible
+// Visible strip ≈ 50–60px per outer card (the "there's more coming" illusion)
+const PREV_Y   = 14;               // top card: mostly off top edge
 const CENTER_Y = 480;
-const NEXT_Y   = 788;
+const NEXT_Y   = 946;              // bottom card: mostly off bottom edge
 
 // Scale — center card intentionally smaller; it will pop
 const PREV_SCALE   = 0.46;
