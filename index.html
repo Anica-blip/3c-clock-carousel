@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3C Clock Carousel</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-wrapper">
+
+    <header class="app-header">
+      <h1>🎠 3C Clock Carousel</h1>
+      <p class="tagline">Upload · Animate · Export</p>
+    </header>
+
+    <main class="app-main">
+
+      <!-- ── Upload & Controls Panel ── -->
+      <section class="panel upload-panel">
+
+        <h2 class="panel-title">Cards</h2>
+
+        <div class="drop-zone" id="dropZone">
+          <span class="drop-icon">📂</span>
+          <p>Drag &amp; drop images here</p>
+          <p class="drop-hint">or</p>
+          <label class="btn btn-primary" for="fileInput">Choose Files</label>
+          <input type="file" id="fileInput" accept="image/*" multiple hidden />
+        </div>
+
+        <div class="card-list-wrap">
+          <div class="card-list-header">
+            <span id="cardCount">0 cards</span>
+            <button class="btn btn-ghost btn-sm" id="clearAllBtn" hidden>Clear All</button>
+          </div>
+          <div class="card-list" id="cardList">
+            <p class="card-list-empty">No cards yet — upload 2 or more to begin</p>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="controls">
+          <h3 class="controls-title">Timing</h3>
+
+          <div class="control-row">
+            <label for="displayDuration">Card Duration</label>
+            <input type="range" id="displayDuration" min="500" max="5000" step="100" value="2000" />
+            <span id="displayDurationVal" class="control-val">2.0s</span>
+          </div>
+
+          <div class="control-row">
+            <label for="transitionSpeed">Transition</label>
+            <input type="range" id="transitionSpeed" min="200" max="1200" step="50" value="600" />
+            <span id="transitionSpeedVal" class="control-val">0.6s</span>
+          </div>
+
+          <div class="control-row">
+            <label for="exportLoops">Export Loops</label>
+            <input type="range" id="exportLoops" min="1" max="5" step="1" value="2" />
+            <span id="exportLoopsVal" class="control-val">2×</span>
+          </div>
+
+          <h3 class="controls-title" style="margin-top: 14px;">Background</h3>
+
+          <div class="control-row">
+            <label for="bgColorPicker">Colour</label>
+            <input type="color" id="bgColorPicker" value="#1a1a2e" />
+            <span class="control-val" style="font-size:0.7rem; color: var(--text-dim);">hex</span>
+          </div>
+
+          <div class="control-row">
+            <label for="transparentBg">Transparent BG</label>
+            <label class="toggle">
+              <input type="checkbox" id="transparentBg" />
+              <span class="toggle-track"></span>
+            </label>
+            <span class="control-val" id="transparentNote" style="font-size:0.65rem; color: var(--text-dim);">VP9</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ── Preview Panel ── -->
+      <section class="panel preview-panel">
+
+        <h2 class="panel-title">Preview</h2>
+
+        <div class="canvas-wrap">
+          <canvas id="previewCanvas" width="540" height="960"></canvas>
+          <div class="canvas-overlay" id="canvasOverlay">
+            <div class="overlay-inner">
+              <span class="overlay-icon">🃏</span>
+              <p>Upload at least 2 cards to begin</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-actions">
+          <button class="btn btn-secondary" id="playPauseBtn" disabled>▶ Play</button>
+          <button class="btn btn-export" id="exportBtn" disabled>⬇ Export WebM</button>
+        </div>
+
+        <div class="export-status" id="exportStatus"></div>
+
+      </section>
+
+    </main>
+
+    <footer class="app-footer">
+      <p>Designed and Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success™ Cooking Lab 🧪👨‍🍳</p>
+      <p class="footer-sub">MIT License · Open Source</p>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
