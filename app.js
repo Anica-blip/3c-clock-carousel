@@ -30,11 +30,11 @@ const CARD_MAX_H = 680;
 const CENTER_X = CW / 2;          // 270 — dead center
 const OUTER_X  = CW / 2 + 62;     // 332 — outer cards on the arc (more curve)
 
-// Y positions — outer cards pushed mostly off-screen, just a sliver visible
-// Visible strip ≈ 50–60px per outer card (the "there's more coming" illusion)
-const PREV_Y   = 14;               // top card: mostly off top edge
+// Y positions — outer cards well separated from center, just a thin peek visible
+// ~80px visible strip per outer card, ~190px clear gap to center card edges
+const PREV_Y   = 40;               // top card: thin strip peeking from top
 const CENTER_Y = 480;
-const NEXT_Y   = 946;              // bottom card: mostly off bottom edge
+const NEXT_Y   = 920;              // bottom card: thin strip peeking from bottom
 
 // Scale — center card intentionally smaller; it will pop
 const PREV_SCALE   = 0.46;
@@ -46,8 +46,8 @@ const PREV_ALPHA   = 0.55;
 const NEXT_ALPHA   = 0.55;
 
 // Perspective Y squish — heavy on outer cards = barrel/drum depth
-const PREV_PERSP   = 0.38;   // very squished — edge of the drum
-const NEXT_PERSP   = 0.38;
+const PREV_PERSP   = 0.28;   // very squished — thin edge sliver
+const NEXT_PERSP   = 0.28;
 const CENTER_PERSP = 0.90;   // nearly flat — facing the viewer
 const FULL_PERSP   = 1.00;   // fullscreen — completely flat
 
