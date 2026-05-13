@@ -11,14 +11,22 @@
 
     <header class="app-header">
       <h1>🎠 3C Clock Carousel</h1>
-      <p class="tagline">Upload · Animate · Export</p>
+      <p class="tagline">Upload · Animate · Mix · Export</p>
     </header>
 
-    <main class="app-main">
+    <!-- ── Tab Bar ── -->
+    <nav class="tab-bar">
+      <button class="tab active" data-tab="carousel">🎠 Carousel</button>
+      <button class="tab" data-tab="mixer">🎬 Mixer</button>
+    </nav>
 
-      <!-- ── Upload & Controls Panel ── -->
+    <!-- ════════════════════════════════════════
+         TAB 1 — CAROUSEL
+    ════════════════════════════════════════ -->
+    <main class="app-main" id="carouselSection">
+
+      <!-- Upload & Controls Panel -->
       <section class="panel upload-panel">
-
         <h2 class="panel-title">Cards</h2>
 
         <div class="drop-zone" id="dropZone">
@@ -42,10 +50,8 @@
         <div class="divider"></div>
 
         <div class="controls">
-
           <h3 class="controls-title">Timing</h3>
 
-          <!-- Per-card context bar — updates dynamically via JS -->
           <div class="duration-context global" id="durationContext">
             <span class="duration-context-label" id="durationContextLabel">All Cards</span>
             <button class="duration-context-deselect" id="deselectCardBtn" hidden title="Back to all cards">×</button>
@@ -74,7 +80,7 @@
           <div class="control-row">
             <label for="bgColorPicker">Colour</label>
             <input type="color" id="bgColorPicker" value="#1a1a2e" />
-            <span class="control-val" style="font-size:0.66rem; color: var(--text-dim);">hex</span>
+            <span class="control-val" style="font-size:0.66rem;color:var(--text-dim)">hex</span>
           </div>
 
           <div class="control-row">
@@ -83,16 +89,13 @@
               <input type="checkbox" id="transparentBg" />
               <span class="toggle-track"></span>
             </label>
-            <span class="control-val" id="transparentNote" style="font-size:0.62rem; color: var(--text-dim);">VP9</span>
+            <span class="control-val" style="font-size:0.62rem;color:var(--text-dim)">VP9</span>
           </div>
-
         </div>
-
       </section>
 
-      <!-- ── Preview Panel ── -->
+      <!-- Preview Panel -->
       <section class="panel preview-panel">
-
         <h2 class="panel-title">Preview</h2>
 
         <div class="canvas-wrap">
@@ -111,10 +114,108 @@
         </div>
 
         <div class="export-status" id="exportStatus"></div>
-
       </section>
 
     </main>
+
+    <!-- ════════════════════════════════════════
+         TAB 2 — MIXER
+    ════════════════════════════════════════ -->
+    <div id="mixerSection" hidden>
+      <div class="mixer-main" style="padding: 18px 24px; max-width: 1080px; margin: 0 auto;">
+
+        <!-- Sources Panel -->
+        <section class="panel mixer-sources">
+          <h2 class="panel-title">Sources</h2>
+
+          <!-- Video -->
+          <div class="source-block">
+            <div class="source-label">📹 Video</div>
+            <div class="drop-zone" id="videoDropZone">
+              <span class="drop-icon">🎬</span>
+              <p>Drop your carousel export here</p>
+              <p class="drop-hint">.webm · .mp4</p>
+              <label class="btn btn-primary btn-sm" for="videoFileInput">Choose Video</label>
+              <input type="file" id="videoFileInput" accept="video/*" hidden />
+            </div>
+            <div class="source-loaded" id="videoLoadedInfo" hidden>
+              <span class="source-file-icon">🎬</span>
+              <span class="source-file-name" id="videoFileName">video.webm</span>
+              <button class="source-clear-btn" id="videoClearBtn" title="Remove">×</button>
+            </div>
+          </div>
+
+          <!-- Audio -->
+          <div class="source-block">
+            <div class="source-label">🎵 Audio</div>
+            <div class="drop-zone" id="audioDropZone">
+              <span class="drop-icon">🎙️</span>
+              <p>Drop your voiceover or music</p>
+              <p class="drop-hint">.mp3 · .wav · .m4a</p>
+              <label class="btn btn-primary btn-sm" for="audioFileInput">Choose Audio</label>
+              <input type="file" id="audioFileInput" accept="audio/*" hidden />
+            </div>
+            <div class="source-loaded" id="audioLoadedInfo" hidden>
+              <span class="source-file-icon">🎵</span>
+              <span class="source-file-name" id="audioFileName">audio.mp3</span>
+              <button class="source-clear-btn" id="audioClearBtn" title="Remove">×</button>
+            </div>
+          </div>
+
+          <!-- FFmpeg Engine -->
+          <div class="ffmpeg-engine">
+            <div class="divider"></div>
+            <button class="btn btn-ghost btn-sm" id="ffmpegLoadBtn">⚙ Load Mixer Engine</button>
+            <p class="ffmpeg-load-status" id="ffmpegLoadStatus">Engine loads automatically when you switch to this tab.</p>
+          </div>
+        </section>
+
+        <!-- Preview + Export Panel -->
+        <section class="panel mixer-preview-panel">
+          <h2 class="panel-title">Preview &amp; Export</h2>
+
+          <div class="mixer-video-wrap">
+            <video id="mixerPreviewVideo" controls playsinline></video>
+            <div class="mixer-video-placeholder" id="mixerVideoPlaceholder">
+              <p>🎬 Load a video to preview</p>
+            </div>
+          </div>
+
+          <div class="mixer-controls">
+            <h3 class="controls-title">Mix Controls</h3>
+
+            <div class="control-row">
+              <label for="mixerVolume">Audio Volume</label>
+              <input type="range" id="mixerVolume" min="0" max="2" step="0.05" value="1" />
+              <span id="mixerVolumeVal" class="control-val">100%</span>
+            </div>
+
+            <div class="control-row">
+              <label for="mixerOffset">Audio Start</label>
+              <input type="range" id="mixerOffset" min="0" max="10" step="0.5" value="0" />
+              <span id="mixerOffsetVal" class="control-val">0.0s</span>
+            </div>
+
+            <div class="control-row">
+              <label for="mixerLoopAudio">Loop Audio</label>
+              <label class="toggle">
+                <input type="checkbox" id="mixerLoopAudio" />
+                <span class="toggle-track"></span>
+              </label>
+              <span class="control-val" style="font-size:0.62rem;color:var(--text-dim)">BG</span>
+            </div>
+          </div>
+
+          <div class="mixer-actions">
+            <button class="btn btn-secondary" id="mixerPreviewBtn" disabled>▶ Preview Mix</button>
+            <button class="btn btn-mp4" id="exportMp4Btn" disabled>⬇ Export MP4</button>
+          </div>
+
+          <div class="export-status" id="mixerStatus"></div>
+        </section>
+
+      </div>
+    </div>
 
     <footer class="app-footer">
       <p>Designed and Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success™ Cooking Lab 🧪👨‍🍳</p>
@@ -124,5 +225,6 @@
   </div>
 
   <script src="app.js"></script>
+  <script type="module" src="mixer.js"></script>
 </body>
 </html>
