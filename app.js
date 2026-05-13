@@ -12,36 +12,48 @@ const ctx    = canvas.getContext('2d');
 const CW     = canvas.width;   // 540
 const CH     = canvas.height;  // 960
 
-// ── Carousel Layout Constants ────────────────────
-// Three cards visible: top (prev), center (current), bottom (next)
-const PREV_Y   = 130;
-const CENTER_Y = 490;
-const NEXT_Y   = 850;
-
-const PREV_SCALE   = 0.48;
-const CENTER_SCALE = 0.78;
-const NEXT_SCALE   = 0.48;
-const PREV_ALPHA   = 0.52;
-const NEXT_ALPHA   = 0.52;
-const CENTER_GLOW  = 26;
-
-// Card max dimensions (at scale 1.0)
+// ── Card Max Dimensions ───────────────────────────
 const CARD_MAX_W = 420;
 const CARD_MAX_H = 680;
 const ACTIVE_X   = CW / 2;
 
-// ── Animation State Machine ───────────────────────
-// CAROUSEL → POP_IN → FULLSCREEN → POP_OUT → SHIFT → CAROUSEL
+// ── Carousel Position Constants ───────────────────
+// Three cards on a vertical clock wheel
+const PREV_Y   = 105;    // top card — mostly off screen, peek from top
+const CENTER_Y = 490;    // front card — fully visible center
+const NEXT_Y   = 875;    // bottom card — mostly off screen, peek from bottom
+
+const PREV_SCALE   = 0.52;
+const CENTER_SCALE = 0.78;
+const NEXT_SCALE   = 0.52;
+const PREV_ALPHA   = 0.58;
+const NEXT_ALPHA   = 0.58;
+const CENTER_GLOW  = 26;
+
+// ── 3D Clock Tilt Constants ────────────────────────
+// Cards are on a rotating drum — top/bottom cards are angled
+// Rotation: Z-axis (visible lean). Perspective: Y-scale squish (depth simulation)
+const PREV_ROT    = -0.15;   // radians (~-8.6°) — top card leans back/left
+const NEXT_ROT    =  0.15;   // radians (~+8.6°) — bottom card leans forward/right
+const CENTER_ROT  = -0.04;   // radians (~-2.3°) — center card, subtle lean
+const FULL_ROT    =  0.00;   // card pops completely straight
+
+const PREV_PERSP  = 0.68;    // Y squish — top card appears foreshortened
+const NEXT_PERSP  = 0.68;    // Y squish — bottom card appears foreshortened
+const CENTER_PERSP = 0.96;   // barely any squish — front card nearly flat
+const FULL_PERSP  = 1.00;    // fullscreen card — completely flat
+
+// ── Animation States ──────────────────────────────
 const S = {
-  CAROUSEL  : 'carousel',    // brief pause showing 3 cards
-  POP_IN    : 'pop_in',      // center card zooms to fullscreen
-  FULLSCREEN: 'fullscreen',  // card held at fullscreen
-  POP_OUT   : 'pop_out',     // card returns to deck
-  SHIFT     : 'shift',       // deck scrolls up, next card rises to center
+  CAROUSEL  : 'carousel',
+  POP_IN    : 'pop_in',
+  FULLSCREEN: 'fullscreen',
+  POP_OUT   : 'pop_out',
+  SHIFT     : 'shift',
 };
 
-const CAROUSEL_HOLD  = 220;  // ms — brief pause before pop
-const POP_DURATION   = 360;  // ms — zoom in / zoom out
+const CAROUSEL_HOLD = 240;   // ms — brief pause to show the 3-card deck
+const POP_DURATION  = 380;   // ms — zoom in / zoom out
 
 // ── State ────────────────────────────────────────
 let state      = S.CAROUSEL;
@@ -64,7 +76,7 @@ let recordedChunks   = [];
 let progressInterval = null;
 
 // ── Cards ─────────────────────────────────────────
-const cards = [];   // { img, url, name }
+const cards = [];
 
 // ── DOM ───────────────────────────────────────────
 const dropZone          = document.getElementById('dropZone');
@@ -86,8 +98,8 @@ const bgColorPicker     = document.getElementById('bgColorPicker');
 const transparentBgEl   = document.getElementById('transparentBg');
 
 // ── Index Helpers ─────────────────────────────────
-function getPrevIdx() { return (currentIdx - 1 + cards.length) % cards.length; }
-function getNextIdx() { return (currentIdx + 1) % cards.length; }
+function getPrevIdx()     { return (currentIdx - 1 + cards.length) % cards.length; }
+function getNextIdx()     { return (currentIdx + 1) % cards.length; }
 function getNextNextIdx() { return (currentIdx + 2) % cards.length; }
 
 // ── Easing ────────────────────────────────────────
@@ -98,71 +110,35 @@ function easeOutBack(t) {
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
-function easeOutCubic(t) {
-  return 1 - Math.pow(1 - t, 3);
-}
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+// ── Lerp ─────────────────────────────────────────
+function lerp(a, b, t) { return a + (b - a) * t; }
 
 // ── Card Dimensions ───────────────────────────────
 function getCardDim(img, scale, maxW, maxH) {
   const mW = (maxW !== undefined ? maxW : CARD_MAX_W) * scale;
   const mH = (maxH !== undefined ? maxH : CARD_MAX_H) * scale;
-  const nw = img.naturalWidth  || 1;
-  const nh = img.naturalHeight || 1;
-  const ar = nw / nh;
+  const ar = (img.naturalWidth || 1) / (img.naturalHeight || 1);
   let w, h;
   if (ar > mW / mH) { w = mW; h = w / ar; }
   else              { h = mH; w = h * ar; }
   return { w, h };
 }
 
-// Full-screen dimensions — fit to 96% of canvas
 function getFullDim(img) {
-  const nw = img.naturalWidth  || 1;
-  const nh = img.naturalHeight || 1;
-  const ar = nw / nh;
-  const maxW = CW * 0.97;
-  const maxH = CH * 0.97;
+  const ar     = (img.naturalWidth || 1) / (img.naturalHeight || 1);
+  const maxW   = CW * 0.97;
+  const maxH   = CH * 0.97;
   let w, h;
   if (ar > maxW / maxH) { w = maxW; h = w / ar; }
   else                  { h = maxH; w = h * ar; }
   return { w, h };
 }
 
-// ── Core Draw Call ────────────────────────────────
-function drawCardSize(img, cx, cy, w, h, alpha, shadowBlur) {
-  if (!img || !img.complete || w <= 0 || h <= 0) return;
-  shadowBlur = shadowBlur || 0;
-  const x = cx - w / 2;
-  const y = cy - h / 2;
-  const r = Math.max(6, (w / CARD_MAX_W) * 14);
-
-  ctx.save();
-  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-
-  if (shadowBlur > 0) {
-    ctx.shadowColor   = 'rgba(80, 10, 200, 0.6)';
-    ctx.shadowBlur    = shadowBlur;
-    ctx.shadowOffsetY = 5;
-    ctx.fillStyle     = 'rgba(0,0,0,0.6)';
-    roundRectPath(x, y, w, h, r);
-    ctx.fill();
-    ctx.shadowBlur    = 0;
-    ctx.shadowOffsetY = 0;
-  }
-
-  roundRectPath(x, y, w, h, r);
-  ctx.clip();
-  ctx.drawImage(img, x, y, w, h);
-  ctx.restore();
-}
-
-function drawCard(img, cx, cy, scale, alpha, shadowBlur) {
-  const d = getCardDim(img, scale);
-  drawCardSize(img, cx, cy, d.w, d.h, alpha, shadowBlur || 0);
-}
-
-// ── Rounded Rect Path ─────────────────────────────
-function roundRectPath(x, y, w, h, r) {
+// ── Rounded Rect Path (centered at 0,0) ──────────
+function roundRectCentered(w, h, r) {
+  const x = -w / 2, y = -h / 2;
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
@@ -176,7 +152,56 @@ function roundRectPath(x, y, w, h, r) {
   ctx.closePath();
 }
 
-// ── Draw Background ──────────────────────────────
+// ── Core Draw: Transformed Card ───────────────────
+// cx, cy  = center of card on canvas
+// w, h    = card dimensions
+// alpha   = opacity
+// rot     = Z-rotation in radians (the visible lean/slant)
+// perspY  = Y-axis scale factor (< 1 simulates 3D depth)
+// glow    = shadow blur amount
+function drawCardTransformed(img, cx, cy, w, h, alpha, rot, perspY, glow) {
+  if (!img || !img.complete || w <= 0 || h <= 0) return;
+  rot    = rot    || 0;
+  perspY = perspY || 1;
+  glow   = glow   || 0;
+
+  const r = Math.max(6, (w / CARD_MAX_W) * 14);
+
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+  // Move to card center, apply rotation + Y perspective
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(1, perspY);
+
+  // Shadow pass (drawn before clip so it bleeds outward)
+  if (glow > 0) {
+    ctx.shadowColor   = 'rgba(70, 5, 190, 0.65)';
+    ctx.shadowBlur    = glow;
+    ctx.shadowOffsetY = 6;
+    ctx.fillStyle     = 'rgba(0,0,0,0.55)';
+    roundRectCentered(w, h, r);
+    ctx.fill();
+    ctx.shadowBlur    = 0;
+    ctx.shadowOffsetY = 0;
+  }
+
+  // Clip and draw image
+  roundRectCentered(w, h, r);
+  ctx.clip();
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+  ctx.restore();
+}
+
+// ── Convenience: scale-based draw ────────────────
+function drawCard(img, cx, cy, scale, alpha, rot, perspY, glow) {
+  const d = getCardDim(img, scale);
+  drawCardTransformed(img, cx, cy, d.w, d.h, alpha, rot || 0, perspY || 1, glow || 0);
+}
+
+// ── Draw Background ───────────────────────────────
 function drawBackground() {
   if (transparentBg) {
     ctx.clearRect(0, 0, CW, CH);
@@ -186,7 +211,7 @@ function drawBackground() {
   }
 }
 
-// ── Draw Watermark ───────────────────────────────
+// ── Draw Watermark ────────────────────────────────
 function drawWatermark() {
   ctx.save();
   ctx.globalAlpha = 0.28;
@@ -199,24 +224,25 @@ function drawWatermark() {
   ctx.restore();
 }
 
-// ── Draw Empty State ──────────────────────────────
+// ── Draw Empty Canvas ─────────────────────────────
 function drawEmpty() {
   drawBackground();
   ctx.save();
   ctx.globalAlpha = 0.15;
   ctx.fillStyle   = '#ffffff';
   ctx.textAlign   = 'center';
-  ctx.font        = '22px "Segoe UI", system-ui, sans-serif';
+  ctx.font        = '20px "Segoe UI", system-ui, sans-serif';
   ctx.fillText('3C Clock Carousel', CW / 2, CH / 2);
   ctx.restore();
   drawWatermark();
 }
 
-// ── Carousel View (3 cards stacked) ──────────────
+// ── Draw Carousel (3-card clock-wheel view) ───────
 function drawCarouselView() {
-  drawCard(cards[getPrevIdx()].img, ACTIVE_X, PREV_Y,   PREV_SCALE,   PREV_ALPHA);
-  drawCard(cards[getNextIdx()].img, ACTIVE_X, NEXT_Y,   NEXT_SCALE,   NEXT_ALPHA);
-  drawCard(cards[currentIdx].img,   ACTIVE_X, CENTER_Y, CENTER_SCALE, 1.0, CENTER_GLOW);
+  // Draw back cards first, center card last (on top)
+  drawCard(cards[getPrevIdx()].img, ACTIVE_X, PREV_Y,   PREV_SCALE,   PREV_ALPHA,   PREV_ROT,   PREV_PERSP,   0);
+  drawCard(cards[getNextIdx()].img, ACTIVE_X, NEXT_Y,   NEXT_SCALE,   NEXT_ALPHA,   NEXT_ROT,   NEXT_PERSP,   0);
+  drawCard(cards[currentIdx].img,   ACTIVE_X, CENTER_Y, CENTER_SCALE, 1.0,          CENTER_ROT, CENTER_PERSP, CENTER_GLOW);
 }
 
 // ── Main Animation Frame ──────────────────────────
@@ -236,60 +262,74 @@ function drawFrame(ts) {
   if (stateStart === null) stateStart = ts;
   const elapsed = ts - stateStart;
 
-  // CAROUSEL — brief 3-card view before pop
+  // ── CAROUSEL — brief clock-wheel deck view ──────
   if (state === S.CAROUSEL) {
     drawCarouselView();
     if (elapsed >= CAROUSEL_HOLD) { state = S.POP_IN; stateStart = ts; }
   }
 
-  // POP IN — center card zooms forward to fill screen
+  // ── POP IN — center card zooms forward, straightens ─
   else if (state === S.POP_IN) {
-    const p  = Math.min(elapsed / POP_DURATION, 1);
-    const ep = easeOutBack(p);
-    const fo = easeOutCubic(p);
+    const p   = Math.min(elapsed / POP_DURATION, 1);
+    const ep  = easeOutBack(p);       // pop with slight overshoot
+    const efo = easeOutCubic(p);      // smooth fade for side cards
 
     const cur = cards[currentIdx].img;
+    // Interpolate dimensions from carousel to fullscreen
     const d1  = getCardDim(cur, CENTER_SCALE);
     const d2  = getFullDim(cur);
-    const w   = d1.w + (d2.w - d1.w) * ep;
-    const h   = d1.h + (d2.h - d1.h) * ep;
+    const w   = lerp(d1.w, d2.w, ep);
+    const h   = lerp(d1.h, d2.h, ep);
+    // Rotation + perspective interpolate to flat/straight
+    const rot   = lerp(CENTER_ROT,   FULL_ROT,   efo);
+    const perspY = lerp(CENTER_PERSP, FULL_PERSP, efo);
 
-    drawCard(cards[getPrevIdx()].img, ACTIVE_X, PREV_Y, PREV_SCALE * (1 - fo * 0.35), PREV_ALPHA * (1 - fo));
-    drawCard(cards[getNextIdx()].img, ACTIVE_X, NEXT_Y, NEXT_SCALE * (1 - fo * 0.35), NEXT_ALPHA * (1 - fo));
-    drawCardSize(cur, ACTIVE_X, CENTER_Y, w, h, 1.0, CENTER_GLOW * p);
+    // Side cards: tilt stays, but they fade and shrink as center pops
+    const sideAlpha = lerp(PREV_ALPHA, 0, efo);
+    const sideSc    = lerp(PREV_SCALE, PREV_SCALE * 0.7, efo);
+    drawCard(cards[getPrevIdx()].img, ACTIVE_X, PREV_Y, sideSc, sideAlpha, PREV_ROT, PREV_PERSP);
+    drawCard(cards[getNextIdx()].img, ACTIVE_X, NEXT_Y, sideSc, sideAlpha, NEXT_ROT, NEXT_PERSP);
+
+    // Center card pops forward and straightens
+    drawCardTransformed(cur, ACTIVE_X, CENTER_Y, w, h, 1.0, rot, perspY, lerp(CENTER_GLOW, 0, efo));
 
     if (p >= 1) { state = S.FULLSCREEN; stateStart = ts; }
   }
 
-  // FULLSCREEN — card fills screen for displayDuration
+  // ── FULLSCREEN — card flat on screen for displayDuration ─
   else if (state === S.FULLSCREEN) {
-    const cur    = cards[currentIdx].img;
-    const d      = getFullDim(cur);
-    drawCardSize(cur, ACTIVE_X, CENTER_Y, d.w, d.h, 1.0, CENTER_GLOW);
+    const cur   = cards[currentIdx].img;
+    const d     = getFullDim(cur);
+    drawCardTransformed(cur, ACTIVE_X, CENTER_Y, d.w, d.h, 1.0, FULL_ROT, FULL_PERSP, CENTER_GLOW);
 
     if (elapsed >= displayDuration) { state = S.POP_OUT; stateStart = ts; }
   }
 
-  // POP OUT — card shrinks back to carousel position
+  // ── POP OUT — card shrinks back and tilts to carousel ─
   else if (state === S.POP_OUT) {
-    const p  = Math.min(elapsed / POP_DURATION, 1);
-    const ep = easeInOutCubic(p);
-    const fi = easeOutCubic(p);
+    const p   = Math.min(elapsed / POP_DURATION, 1);
+    const ep  = easeInOutCubic(p);
+    const efi = easeOutCubic(p);
 
     const cur = cards[currentIdx].img;
     const d2  = getFullDim(cur);
     const d1  = getCardDim(cur, CENTER_SCALE);
-    const w   = d2.w + (d1.w - d2.w) * ep;
-    const h   = d2.h + (d1.h - d2.h) * ep;
+    const w   = lerp(d2.w, d1.w, ep);
+    const h   = lerp(d2.h, d1.h, ep);
+    const rot    = lerp(FULL_ROT,   CENTER_ROT,   efi);
+    const perspY = lerp(FULL_PERSP, CENTER_PERSP, efi);
 
-    drawCard(cards[getPrevIdx()].img, ACTIVE_X, PREV_Y, PREV_SCALE * (0.65 + 0.35 * fi), PREV_ALPHA * fi);
-    drawCard(cards[getNextIdx()].img, ACTIVE_X, NEXT_Y, NEXT_SCALE * (0.65 + 0.35 * fi), NEXT_ALPHA * fi);
-    drawCardSize(cur, ACTIVE_X, CENTER_Y, w, h, 1.0, CENTER_GLOW * (1 - ep));
+    // Side cards come back in with their tilts
+    const sideAlpha = lerp(0, PREV_ALPHA, efi);
+    const sideSc    = lerp(PREV_SCALE * 0.7, PREV_SCALE, efi);
+    drawCard(cards[getPrevIdx()].img, ACTIVE_X, PREV_Y, sideSc, sideAlpha, PREV_ROT, PREV_PERSP);
+    drawCard(cards[getNextIdx()].img, ACTIVE_X, NEXT_Y, sideSc, sideAlpha, NEXT_ROT, NEXT_PERSP);
+    drawCardTransformed(cur, ACTIVE_X, CENTER_Y, w, h, 1.0, rot, perspY, lerp(0, CENTER_GLOW, efi));
 
     if (p >= 1) { state = S.SHIFT; stateStart = ts; }
   }
 
-  // SHIFT — deck scrolls up, next card rises to center
+  // ── SHIFT — clock wheel turns: next card rises to center ─
   else if (state === S.SHIFT) {
     const p  = Math.min(elapsed / transitionDuration, 1);
     const ep = easeInOutCubic(p);
@@ -299,30 +339,38 @@ function drawFrame(ts) {
     const nxtCard     = cards[getNextIdx()].img;
     const newNextCard = cards[getNextNextIdx()].img;
 
-    // Old prev exits off the top
+    // Old prev: exits off the top, tilt increases as it leaves
     drawCard(prevCard, ACTIVE_X,
-      PREV_Y - 200 * ep,
-      PREV_SCALE * (1 - ep * 0.5),
-      PREV_ALPHA * (1 - ep));
+      lerp(PREV_Y,   PREV_Y - 210, ep),
+      lerp(PREV_SCALE, PREV_SCALE * 0.4, ep),
+      lerp(PREV_ALPHA, 0, ep),
+      lerp(PREV_ROT,   PREV_ROT - 0.08, ep),    // tilts further as it exits
+      lerp(PREV_PERSP, 0.45, ep));
 
-    // Current → slides up to prev slot
+    // Current → moves up to prev slot, adopts prev tilt
     drawCard(curCard, ACTIVE_X,
-      CENTER_Y + (PREV_Y - CENTER_Y) * ep,
-      CENTER_SCALE + (PREV_SCALE - CENTER_SCALE) * ep,
-      1.0 - (1.0 - PREV_ALPHA) * ep);
+      lerp(CENTER_Y, PREV_Y,    ep),
+      lerp(CENTER_SCALE, PREV_SCALE, ep),
+      lerp(1.0,      PREV_ALPHA, ep),
+      lerp(CENTER_ROT,   PREV_ROT,   ep),
+      lerp(CENTER_PERSP, PREV_PERSP, ep));
 
-    // Next → rises up to center (the clock motion)
+    // Next → rises to center (the clock wheel motion), sheds its tilt
     drawCard(nxtCard, ACTIVE_X,
-      NEXT_Y + (CENTER_Y - NEXT_Y) * ep,
-      NEXT_SCALE + (CENTER_SCALE - NEXT_SCALE) * ep,
-      NEXT_ALPHA + (1.0 - NEXT_ALPHA) * ep,
-      CENTER_GLOW * ep);
+      lerp(NEXT_Y,   CENTER_Y,    ep),
+      lerp(NEXT_SCALE, CENTER_SCALE, ep),
+      lerp(NEXT_ALPHA, 1.0,          ep),
+      lerp(NEXT_ROT,   CENTER_ROT,   ep),        // tilt straightens as it becomes center
+      lerp(NEXT_PERSP, CENTER_PERSP, ep),
+      lerp(0, CENTER_GLOW, ep));
 
-    // New next → enters from below into the next slot
+    // New next: enters from below with its tilt already applied
     drawCard(newNextCard, ACTIVE_X,
-      NEXT_Y + 220 * (1 - ep),
-      NEXT_SCALE * ep,
-      NEXT_ALPHA * ep);
+      lerp(NEXT_Y + 230, NEXT_Y,    ep),
+      lerp(0,            NEXT_SCALE, ep),
+      lerp(0,            NEXT_ALPHA, ep),
+      NEXT_ROT,
+      lerp(0.45, NEXT_PERSP, ep));
 
     if (p >= 1) {
       currentIdx = getNextIdx();
@@ -336,10 +384,7 @@ function drawFrame(ts) {
 
 // ── Start rAF ────────────────────────────────────
 function startRaf() {
-  if (!rafId) {
-    stateStart = null;
-    rafId = requestAnimationFrame(drawFrame);
-  }
+  if (!rafId) { stateStart = null; rafId = requestAnimationFrame(drawFrame); }
 }
 
 // ── Reset Animation ───────────────────────────────
@@ -349,28 +394,22 @@ function resetAnimation() {
   stateStart = null;
 }
 
-// ── Per-card Duration (for export timing) ────────
+// ── Per-card Duration (export timing) ────────────
 function perCardMs() {
   return CAROUSEL_HOLD + POP_DURATION + displayDuration + POP_DURATION + transitionDuration;
 }
 
-// ── File Upload ───────────────────────────────────
+// ── Upload ────────────────────────────────────────
 function handleFiles(files) {
   const images = Array.from(files).filter(f => f.type.startsWith('image/'));
-  if (images.length === 0) return;
-
+  if (!images.length) return;
   let loaded = 0;
   images.forEach(file => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       cards.push({ img, url, name: file.name });
-      if (++loaded === images.length) {
-        resetAnimation();
-        renderCardList();
-        updateUIState();
-        startRaf();
-      }
+      if (++loaded === images.length) { resetAnimation(); renderCardList(); updateUIState(); startRaf(); }
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
@@ -383,19 +422,14 @@ function handleFiles(files) {
 function removeCard(idx) {
   URL.revokeObjectURL(cards[idx].url);
   cards.splice(idx, 1);
-  resetAnimation();
-  renderCardList();
-  updateUIState();
+  resetAnimation(); renderCardList(); updateUIState();
 }
 
 function clearAll() {
   cards.forEach(c => URL.revokeObjectURL(c.url));
   cards.length = 0;
-  isPlaying    = false;
-  resetAnimation();
-  renderCardList();
-  updateUIState();
-  updateExportStatus('');
+  isPlaying = false;
+  resetAnimation(); renderCardList(); updateUIState(); updateExportStatus('');
 }
 
 // ── Drag Reorder ──────────────────────────────────
@@ -406,34 +440,19 @@ function renderCardList() {
   cardCountEl.textContent = `${cards.length} card${cards.length !== 1 ? 's' : ''}`;
   clearAllBtn.hidden = cards.length === 0;
 
-  if (cards.length === 0) {
+  if (!cards.length) {
     cardListEl.innerHTML = '<p class="card-list-empty">No cards yet — upload 2 or more to begin</p>';
     return;
   }
 
   cards.forEach((card, i) => {
     const div = document.createElement('div');
-    div.className     = 'card-thumb';
-    div.draggable     = true;
-    div.dataset.index = i;
-
-    const img         = document.createElement('img');
-    img.src           = card.url;
-    img.alt           = `Card ${i + 1}`;
-
-    const badge       = document.createElement('span');
-    badge.className   = 'card-index';
-    badge.textContent = i + 1;
-
-    const removeBtn     = document.createElement('button');
-    removeBtn.className = 'card-remove';
-    removeBtn.title     = 'Remove';
-    removeBtn.innerHTML = '\xd7';
-    removeBtn.addEventListener('click', e => { e.stopPropagation(); removeCard(i); });
-
-    div.appendChild(img);
-    div.appendChild(badge);
-    div.appendChild(removeBtn);
+    div.className = 'card-thumb'; div.draggable = true; div.dataset.index = i;
+    const img = document.createElement('img'); img.src = card.url; img.alt = `Card ${i + 1}`;
+    const badge = document.createElement('span'); badge.className = 'card-index'; badge.textContent = i + 1;
+    const btn = document.createElement('button'); btn.className = 'card-remove'; btn.title = 'Remove'; btn.innerHTML = '\xd7';
+    btn.addEventListener('click', e => { e.stopPropagation(); removeCard(i); });
+    div.appendChild(img); div.appendChild(badge); div.appendChild(btn);
     div.addEventListener('dragstart', onDragStart);
     div.addEventListener('dragover',  onDragOver);
     div.addEventListener('dragleave', onDragLeave);
@@ -443,27 +462,16 @@ function renderCardList() {
   });
 }
 
-function onDragStart(e) {
-  dragSrcIdx = parseInt(e.currentTarget.dataset.index);
-  e.currentTarget.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
-}
-function onDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  e.currentTarget.classList.add('drag-target');
-}
+function onDragStart(e) { dragSrcIdx = parseInt(e.currentTarget.dataset.index); e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+function onDragOver(e)  { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('drag-target'); }
 function onDragLeave(e) { e.currentTarget.classList.remove('drag-target'); }
 function onDrop(e) {
   e.preventDefault();
-  const tIdx = parseInt(e.currentTarget.dataset.index);
+  const t = parseInt(e.currentTarget.dataset.index);
   e.currentTarget.classList.remove('drag-target');
-  if (dragSrcIdx !== null && dragSrcIdx !== tIdx) {
-    const [m] = cards.splice(dragSrcIdx, 1);
-    cards.splice(tIdx, 0, m);
-    resetAnimation();
-    renderCardList();
-    updateUIState();
+  if (dragSrcIdx !== null && dragSrcIdx !== t) {
+    const [m] = cards.splice(dragSrcIdx, 1); cards.splice(t, 0, m);
+    resetAnimation(); renderCardList(); updateUIState();
   }
 }
 function onDragEnd(e) {
@@ -480,108 +488,63 @@ function updateUIState() {
   canvasOverlay.classList.toggle('hidden', ready);
   if (!ready) { isPlaying = false; playPauseBtn.textContent = '\u25b6 Play'; }
 }
-
-function disableControls() {
-  playPauseBtn.disabled = true;
-  exportBtn.disabled    = true;
-  clearAllBtn.disabled  = true;
-  fileInput.disabled    = true;
-}
-
-function enableControls() {
-  updateUIState();
-  clearAllBtn.disabled = false;
-  fileInput.disabled   = false;
-}
-
+function disableControls() { playPauseBtn.disabled = true; exportBtn.disabled = true; clearAllBtn.disabled = true; fileInput.disabled = true; }
+function enableControls()  { updateUIState(); clearAllBtn.disabled = false; fileInput.disabled = false; }
 function updateExportStatus(msg) { exportStatusEl.textContent = msg; }
 
 // ── Export ────────────────────────────────────────
 function getSupportedMimeType() {
   const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
-  for (const t of types) {
-    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) return t;
-  }
+  for (const t of types) { if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) return t; }
   return '';
 }
 
 function startExport() {
   if (cards.length < 2) return;
-
-  if (typeof MediaRecorder === 'undefined') {
-    updateExportStatus('\u274c MediaRecorder not supported. Use Chrome, Edge, or Firefox.');
-    return;
-  }
-  if (typeof canvas.captureStream === 'undefined') {
-    updateExportStatus('\u274c captureStream not supported. Safari is not supported. Use Chrome or Edge.');
-    return;
-  }
+  if (typeof MediaRecorder === 'undefined') { updateExportStatus('\u274c MediaRecorder not supported. Use Chrome, Edge, or Firefox.'); return; }
+  if (typeof canvas.captureStream === 'undefined') { updateExportStatus('\u274c captureStream not supported. Use Chrome or Edge.'); return; }
 
   const mimeType      = getSupportedMimeType();
   const totalDuration = cards.length * perCardMs() * exportLoops + 600;
 
-  resetAnimation();
-  stateStart   = null;
-  isPlaying    = true;
-  isRecording  = true;
+  resetAnimation(); stateStart = null;
+  isPlaying = true; isRecording = true;
   playPauseBtn.textContent = '\u23f8 Pause';
-
   disableControls();
   updateExportStatus('\u23fa Recording\u2026 ' + (totalDuration / 1000).toFixed(1) + 's');
 
   const stream  = canvas.captureStream(30);
   const options = mimeType ? { mimeType, videoBitsPerSecond: 4000000 } : {};
 
-  try {
-    mediaRecorder = new MediaRecorder(stream, options);
-  } catch (err) {
-    updateExportStatus('\u274c Recorder error: ' + err.message);
-    isRecording = false;
-    enableControls();
-    return;
-  }
+  try { mediaRecorder = new MediaRecorder(stream, options); }
+  catch (err) { updateExportStatus('\u274c Recorder error: ' + err.message); isRecording = false; enableControls(); return; }
 
   recordedChunks = [];
   mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
   mediaRecorder.onstop = () => {
-    clearInterval(progressInterval);
-    isRecording = false;
-    enableControls();
-    const blob   = new Blob(recordedChunks, { type: mimeType || 'video/webm' });
-    const url    = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href     = url;
-    anchor.download = '3c-clock-carousel.webm';
-    anchor.click();
+    clearInterval(progressInterval); isRecording = false; enableControls();
+    const blob = new Blob(recordedChunks, { type: mimeType || 'video/webm' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a'); a.href = url; a.download = '3c-clock-carousel.webm'; a.click();
     URL.revokeObjectURL(url);
     updateExportStatus('\u2705 Export complete! Use HandBrake or FFmpeg to convert to MP4.');
   };
 
   mediaRecorder.start(100);
-
-  const exportStart = performance.now();
+  const t0 = performance.now();
   progressInterval = setInterval(() => {
-    const rem = Math.max(0, (totalDuration - (performance.now() - exportStart)) / 1000);
+    const rem = Math.max(0, (totalDuration - (performance.now() - t0)) / 1000);
     if (rem > 0) updateExportStatus('\u23fa Recording\u2026 ' + rem.toFixed(1) + 's remaining');
   }, 200);
-
-  setTimeout(() => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  }, totalDuration);
+  setTimeout(() => { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }, totalDuration);
 }
 
 // ── Event Listeners ───────────────────────────────
 fileInput.addEventListener('change', () => { handleFiles(fileInput.files); fileInput.value = ''; });
-
 dropZone.addEventListener('click',     () => fileInput.click());
-dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragover',  e  => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  handleFiles(e.dataTransfer.files);
-});
-
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
 clearAllBtn.addEventListener('click', () => { if (confirm('Remove all cards?')) clearAll(); });
 
 playPauseBtn.addEventListener('click', () => {
@@ -593,26 +556,13 @@ playPauseBtn.addEventListener('click', () => {
 
 exportBtn.addEventListener('click', () => { if (!isRecording) startExport(); });
 
-displayDurationEl.addEventListener('input', function () {
-  displayDuration = parseInt(this.value);
-  displayDurationV.textContent = (displayDuration / 1000).toFixed(1) + 's';
-});
-
-transitionSpeedEl.addEventListener('input', function () {
-  transitionDuration = parseInt(this.value);
-  transitionSpeedV.textContent = (transitionDuration / 1000).toFixed(1) + 's';
-});
-
-exportLoopsEl.addEventListener('input', function () {
-  exportLoops = parseInt(this.value);
-  exportLoopsV.textContent = exportLoops + '\xd7';
-});
-
-bgColorPicker.addEventListener('input', function () { bgColor = this.value; });
-
-transparentBgEl.addEventListener('change', function () {
-  transparentBg               = this.checked;
-  bgColorPicker.disabled      = transparentBg;
+displayDurationEl.addEventListener('input', function () { displayDuration = parseInt(this.value); displayDurationV.textContent = (displayDuration / 1000).toFixed(1) + 's'; });
+transitionSpeedEl.addEventListener('input', function () { transitionDuration = parseInt(this.value); transitionSpeedV.textContent = (transitionDuration / 1000).toFixed(1) + 's'; });
+exportLoopsEl.addEventListener('input',     function () { exportLoops = parseInt(this.value); exportLoopsV.textContent = exportLoops + '\xd7'; });
+bgColorPicker.addEventListener('input',     function () { bgColor = this.value; });
+transparentBgEl.addEventListener('change',  function () {
+  transparentBg = this.checked;
+  bgColorPicker.disabled = transparentBg;
   bgColorPicker.style.opacity = transparentBg ? '0.35' : '1';
 });
 
