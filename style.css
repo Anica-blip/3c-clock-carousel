@@ -75,7 +75,7 @@ body {
 
 /* ── Panels ── */
 .panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
-.panel-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--purple-400); margin-bottom: 12px; }
+.panel-title { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--purple-400); margin-bottom: 12px; }
 
 /* ── Carousel: Upload Panel ── */
 .upload-panel { width: 290px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -89,17 +89,17 @@ body {
 }
 .drop-zone.drag-over { border-color: var(--purple-400); background: var(--purple-tint); }
 .drop-icon { font-size: 1.5rem; line-height: 1; }
-.drop-zone p { color: var(--text-400); font-size: 0.78rem; }
-.drop-hint { color: var(--text-dim) !important; font-size: 0.7rem !important; }
+.drop-zone p { color: var(--text-400); font-size: 0.88rem; }
+.drop-hint { color: var(--text-dim) !important; font-size: 0.80rem !important; }
 
 /* ── Card List ── */
 .card-list-wrap { display: flex; flex-direction: column; gap: 7px; }
-.card-list-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; color: var(--text-dim); padding: 0 2px; }
+.card-list-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; color: var(--text-dim); padding: 0 2px; }
 .card-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 300px; overflow-y: auto; padding-right: 2px; }
 .card-list::-webkit-scrollbar { width: 3px; }
 .card-list::-webkit-scrollbar-track { background: transparent; }
 .card-list::-webkit-scrollbar-thumb { background: var(--border-purple); border-radius: 2px; }
-.card-list-empty { grid-column: 1 / -1; text-align: center; color: var(--text-dim); font-size: 0.72rem; padding: 16px 0; line-height: 1.6; }
+.card-list-empty { grid-column: 1 / -1; text-align: center; color: var(--text-dim); font-size: 0.82rem; padding: 16px 0; line-height: 1.6; }
 
 /* ── Card Thumb ── */
 .card-thumb { position: relative; aspect-ratio: 9/16; border-radius: 5px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: border-color var(--ease), box-shadow var(--ease); user-select: none; }
@@ -115,7 +115,7 @@ body {
 .card-thumb:hover .card-remove { opacity: 1; }
 
 /* ── Duration Context Bar ── */
-.duration-context { display: flex; align-items: center; justify-content: space-between; background: var(--purple-tint); border: 1px solid var(--border-purple); border-radius: var(--radius-sm); padding: 5px 9px; font-size: 0.72rem; color: var(--purple-400); transition: opacity var(--ease); }
+.duration-context { display: flex; align-items: center; justify-content: space-between; background: var(--purple-tint); border: 1px solid var(--border-purple); border-radius: var(--radius-sm); padding: 5px 9px; font-size: 0.82rem; color: var(--purple-400); transition: opacity var(--ease); }
 .duration-context.global { background: transparent; border-color: var(--border); color: var(--text-dim); }
 .duration-context-label { font-weight: 600; }
 .duration-context-deselect { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 0.9rem; padding: 0 2px; transition: color var(--ease); }
@@ -126,12 +126,12 @@ body {
 
 /* ── Controls ── */
 .controls { display: flex; flex-direction: column; gap: 9px; }
-.controls-title { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-400); }
+.controls-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-400); }
 .control-row { display: flex; align-items: center; gap: 8px; }
-.control-row label { font-size: 0.76rem; color: var(--text-400); width: 100px; flex-shrink: 0; }
+.control-row label { font-size: 0.88rem; color: var(--text-400); width: 100px; flex-shrink: 0; }
 .control-row input[type="range"] { flex: 1; height: 3px; accent-color: var(--purple-500); cursor: pointer; }
 .control-row input[type="color"] { flex: 1; height: 26px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; cursor: pointer; padding: 2px; }
-.control-val { font-size: 0.76rem; color: var(--purple-400); width: 30px; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.control-val { font-size: 0.88rem; color: var(--purple-400); width: 30px; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
 /* ── Toggle ── */
 .toggle { position: relative; display: inline-block; width: 36px; height: 20px; cursor: pointer; }
@@ -163,7 +163,7 @@ body {
 .mixer-sources { width: 290px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
 
 .source-block { display: flex; flex-direction: column; gap: 7px; }
-.source-label { font-size: 0.72rem; font-weight: 600; color: var(--text-400); letter-spacing: 0.05em; }
+.source-label { font-size: 0.84rem; font-weight: 600; color: var(--text-400); letter-spacing: 0.05em; }
 
 /* File loaded state */
 .source-loaded {
@@ -174,13 +174,13 @@ body {
   padding: 8px 10px;
 }
 .source-file-icon { font-size: 1rem; flex-shrink: 0; }
-.source-file-name { font-size: 0.74rem; color: var(--text-100); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.source-file-name { font-size: 0.86rem; color: var(--text-100); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .source-clear-btn { background: none; border: none; color: var(--text-dim); font-size: 1rem; cursor: pointer; padding: 0 2px; flex-shrink: 0; transition: color var(--ease); line-height: 1; }
 .source-clear-btn:hover { color: var(--red-500); }
 
 /* FFmpeg engine status */
 .ffmpeg-engine { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
-.ffmpeg-load-status { font-size: 0.72rem; color: var(--text-dim); line-height: 1.4; min-height: 16px; }
+.ffmpeg-load-status { font-size: 0.84rem; color: var(--text-dim); line-height: 1.4; min-height: 16px; }
 
 /* ── Mixer Preview Panel ── */
 .mixer-preview-panel { flex: 1; display: flex; flex-direction: column; gap: 14px; }
@@ -231,7 +231,7 @@ body {
 .btn-mp4:hover { box-shadow: 0 0 22px rgba(59, 130, 246, 0.5); }
 
 /* ── Export / Mixer Status ── */
-.export-status { font-size: 0.76rem; color: var(--purple-400); text-align: center; min-height: 18px; line-height: 1.4; padding: 0 12px; }
+.export-status { font-size: 0.86rem; color: var(--purple-400); text-align: center; min-height: 18px; line-height: 1.4; padding: 0 12px; }
 
 /* ── Footer ── */
 .app-footer { text-align: center; padding: 12px 28px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 0.7rem; line-height: 1.7; flex-shrink: 0; }
