@@ -69,7 +69,8 @@
     try {
       const { FFmpeg }              = FFmpegWASM;
       const { toBlobURL }           = FFmpegUtil;
-      const BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+      // Self-hosted in repo /ffmpeg/ folder — no CDN, no cross-origin chunk errors
+      const BASE = new URL('./ffmpeg', document.baseURI).href;
 
       ffmpeg = new FFmpeg();
 
