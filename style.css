@@ -128,11 +128,11 @@ body {
 /* ── Controls ── */
 .controls { display: flex; flex-direction: column; gap: 9px; }
 .controls-title { font-size: 1.03rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-400); }
-.control-row { display: flex; align-items: center; gap: 8px; }
+.control-row { display: flex; align-items: center; gap: 12px; min-height: 32px; }
 .control-row label { font-size: 1.0rem; color: var(--text-400); width: 100px; flex-shrink: 0; }
-.control-row input[type="range"] { flex: 1; height: 3px; accent-color: var(--purple-500); cursor: pointer; }
+.control-row input[type="range"] { flex: 1; height: 5px; accent-color: var(--purple-500); cursor: pointer; border-radius: 4px; }
 .control-row input[type="color"] { flex: 1; height: 26px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; cursor: pointer; padding: 2px; }
-.control-val { font-size: 0.88rem; color: var(--purple-400); width: 36px; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; font-size: 0.95rem; }
+.control-val { font-size: 0.88rem; color: var(--purple-400); width: 44px; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; font-size: 1.0rem; font-weight: 600; }
 
 /* ── Toggle ── */
 .toggle { position: relative; display: inline-block; width: 36px; height: 20px; cursor: pointer; }
@@ -151,7 +151,7 @@ body {
 .overlay-inner { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .overlay-icon { font-size: 2rem; }
 .canvas-overlay p { color: var(--text-400); font-size: 0.78rem; padding: 0 16px; line-height: 1.5; }
-.preview-actions { display: flex; gap: 10px; }
+.preview-actions { display: flex; gap: 14px; margin-top: 6px; }
 
 /* ══════════════════════════════════════════════
    MIXER SECTION
@@ -184,7 +184,7 @@ body {
 .ffmpeg-load-status { font-size: 0.96rem; color: var(--text-dim); line-height: 1.4; min-height: 16px; }
 
 /* ── Mixer Preview Panel ── */
-.mixer-preview-panel { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.mixer-preview-panel { flex: 1; display: flex; flex-direction: column; gap: 20px; }
 
 .mixer-video-wrap {
   position: relative;
@@ -212,12 +212,12 @@ body {
 .mixer-video-placeholder p { color: var(--text-dim); font-size: 0.78rem; text-align: center; }
 .mixer-video-placeholder.hidden { display: none; }
 
-.mixer-controls { display: flex; flex-direction: column; gap: 9px; }
+.mixer-controls { display: flex; flex-direction: column; gap: 16px; }
 
-.mixer-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.mixer-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
 
 /* ── Buttons ── */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500; cursor: pointer; border: none; transition: background var(--ease), box-shadow var(--ease), opacity var(--ease); white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 10px 20px; border-radius: var(--radius-sm); font-size: 0.92rem; font-weight: 500; cursor: pointer; border: none; transition: background var(--ease), box-shadow var(--ease), opacity var(--ease); white-space: nowrap; }
 .btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .btn-primary { background: var(--purple-500); color: #fff; }
 .btn-primary:hover { background: var(--purple-400); }
@@ -225,14 +225,14 @@ body {
 .btn-secondary:hover { background: rgba(168, 85, 247, 0.2); }
 .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
 .btn-ghost:hover { color: var(--text-400); border-color: var(--text-400); }
-.btn-sm { padding: 4px 12px; font-size: 0.72rem; }
-.btn-export { background: linear-gradient(135deg, var(--purple-600), var(--purple-400)); color: #fff; padding: 9px 22px; font-size: 0.85rem; }
+.btn-sm { padding: 6px 14px; font-size: 0.82rem; }
+.btn-export { background: linear-gradient(135deg, var(--purple-600), var(--purple-400)); color: #fff; padding: 12px 28px; font-size: 0.98rem; }
 .btn-export:hover { box-shadow: 0 0 22px var(--purple-glow); }
-.btn-mp4 { background: linear-gradient(135deg, #1d4ed8, #3b82f6); color: #fff; padding: 9px 22px; font-size: 0.85rem; }
+.btn-mp4 { background: linear-gradient(135deg, #1d4ed8, #3b82f6); color: #fff; padding: 12px 28px; font-size: 0.98rem; }
 .btn-mp4:hover { box-shadow: 0 0 22px rgba(59, 130, 246, 0.5); }
 
 /* ── Export / Mixer Status ── */
-.export-status { font-size: 0.93rem; color: var(--purple-400); text-align: center; min-height: 18px; line-height: 1.4; padding: 0 12px; }
+.export-status { font-size: 1.0rem; color: var(--purple-400); text-align: center; min-height: 22px; line-height: 1.5; padding: 4px 12px; font-weight: 500; }
 
 /* ── Footer ── */
 .app-footer { text-align: center; padding: 12px 28px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 0.7rem; line-height: 1.7; flex-shrink: 0; }
