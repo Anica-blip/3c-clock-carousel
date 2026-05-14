@@ -69,8 +69,10 @@
     try {
       const { FFmpeg }              = FFmpegWASM;
       const { toBlobURL }           = FFmpegUtil;
-      // Self-hosted in repo /ffmpeg/ folder — no CDN, no cross-origin chunk errors
-      const BASE = new URL('./ffmpeg', document.baseURI).href;
+      // ffmpeg.js + 814.ffmpeg.js + ffmpeg-core.js: self-hosted (small, no chunk CSP error)
+      // ffmpeg-core.wasm: CDN via toBlobURL (fetch-based, not blocked by CSP; 31MB > GitHub 25MB limit)
+      const BASE_LOCAL = new URL('./ffmpeg', document.baseURI).href;
+      const BASE_CDN   = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
 
       ffmpeg = new FFmpeg();
 
@@ -81,10 +83,9 @@
         }
       });
 
-      // Fetch core + wasm as blobs — avoids CORS issues on GitHub Pages
       await ffmpeg.load({
-        coreURL: await toBlobURL(`${BASE}/ffmpeg-core.js`,   'text/javascript'),
-        wasmURL: await toBlobURL(`${BASE}/ffmpeg-core.wasm`, 'application/wasm'),
+        coreURL: await toBlobURL(`${BASE_LOCAL}/ffmpeg-core.js`,  'text/javascript'),
+        wasmURL: await toBlobURL(`${BASE_CDN}/ffmpeg-core.wasm`,  'application/wasm'),
       });
 
       ffmpegLoaded = true;
