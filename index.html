@@ -224,8 +224,16 @@
 
   </div>
 
+  <!-- ─────────────────────────────────────────────────────
+       Scripts — load order matters:
+       1. app.js         (carousel logic, tab switching)
+       2. ffmpeg.js      (v0.12 UMD → global FFmpegWASM)
+       3. ffmpeg/util    (v0.12 util → global FFmpegUtil, provides fetchFile + toBlobURL)
+       4. mixer.js       (reads FFmpegWASM + FFmpegUtil globals)
+  ───────────────────────────────────────────────────── -->
   <script src="app.js"></script>
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
   <script src="mixer.js"></script>
 </body>
 </html>
