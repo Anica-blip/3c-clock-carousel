@@ -26,6 +26,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
 
 body {
   background: var(--bg-deep);
@@ -57,8 +58,8 @@ body {
 }
 .tab {
   padding: 10px 20px;
-  font-size: 0.92rem;
-  font-weight: 500;
+  font-size: 1.05rem;
+  font-weight: 600;
   color: var(--text-dim);
   background: none;
   border: none;
@@ -75,7 +76,7 @@ body {
 
 /* ── Panels ── */
 .panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
-.panel-title { font-size: 0.97rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--purple-400); margin-bottom: 12px; }
+.panel-title { font-size: 1.12rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--purple-400); margin-bottom: 12px; }
 
 /* ── Carousel: Upload Panel ── */
 .upload-panel { width: 290px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -90,11 +91,11 @@ body {
 .drop-zone.drag-over { border-color: var(--purple-400); background: var(--purple-tint); }
 .drop-icon { font-size: 1.5rem; line-height: 1; }
 .drop-zone p { color: var(--text-400); font-size: 0.95rem; }
-.drop-hint { color: var(--text-dim) !important; font-size: 0.86rem !important; }
+.drop-hint { color: var(--text-dim) !important; font-size: 0.92rem !important; }
 
 /* ── Card List ── */
 .card-list-wrap { display: flex; flex-direction: column; gap: 7px; }
-.card-list-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; color: var(--text-dim); padding: 0 2px; }
+.card-list-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.97rem; color: var(--text-dim); padding: 0 2px; }
 .card-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 300px; overflow-y: auto; padding-right: 2px; }
 .card-list::-webkit-scrollbar { width: 3px; }
 .card-list::-webkit-scrollbar-track { background: transparent; }
@@ -126,9 +127,9 @@ body {
 
 /* ── Controls ── */
 .controls { display: flex; flex-direction: column; gap: 9px; }
-.controls-title { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-400); }
+.controls-title { font-size: 1.03rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-400); }
 .control-row { display: flex; align-items: center; gap: 8px; }
-.control-row label { font-size: 0.94rem; color: var(--text-400); width: 100px; flex-shrink: 0; }
+.control-row label { font-size: 1.0rem; color: var(--text-400); width: 100px; flex-shrink: 0; }
 .control-row input[type="range"] { flex: 1; height: 3px; accent-color: var(--purple-500); cursor: pointer; }
 .control-row input[type="color"] { flex: 1; height: 26px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; cursor: pointer; padding: 2px; }
 .control-val { font-size: 0.88rem; color: var(--purple-400); width: 36px; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; font-size: 0.95rem; }
@@ -163,7 +164,7 @@ body {
 .mixer-sources { width: 290px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
 
 .source-block { display: flex; flex-direction: column; gap: 7px; }
-.source-label { font-size: 0.96rem; font-weight: 600; color: var(--text-400); letter-spacing: 0.05em; }
+.source-label { font-size: 1.08rem; font-weight: 600; color: var(--text-400); letter-spacing: 0.05em; }
 
 /* File loaded state */
 .source-loaded {
