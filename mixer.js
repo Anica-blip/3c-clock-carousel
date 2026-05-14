@@ -1,12 +1,13 @@
 /* ═══════════════════════════════════════════════
    3C Clock Carousel — mixer.js
-   Video + Audio Merger · ffmpeg.wasm v0.11
-   No Web Worker · GitHub Pages compatible
+   Video + Audio Merger · ffmpeg.wasm v0.12
+   No SharedArrayBuffer required · GitHub Pages compatible
    3C Thread To Success™ Cooking Lab
 ═══════════════════════════════════════════════ */
 
-// ffmpeg.wasm v0.11 is loaded via <script> tag in index.html
-// It exposes a global FFmpeg object: { createFFmpeg, fetchFile }
+// ffmpeg.wasm v0.12 is loaded via <script> tags in index.html
+// Globals: FFmpegWASM  → { FFmpeg }
+//          FFmpegUtil  → { fetchFile, toBlobURL }
 
 (function () {
   'use strict';
@@ -50,31 +51,40 @@
   const ffmpegLoadBtn    = document.getElementById('ffmpegLoadBtn');
   const ffmpegLoadStatus = document.getElementById('ffmpegLoadStatus');
 
-  // ── Load FFmpeg v0.11 ────────────────────────────
+  // ── Load FFmpeg v0.12 ────────────────────────────
+  // v0.12 uses: new FFmpeg(), ffmpeg.load({ coreURL, wasmURL })
+  // No SharedArrayBuffer needed with the non-MT (single-thread) core.
+  // toBlobURL fetches the core/wasm via blob: to bypass GitHub Pages CORS.
   async function loadFFmpeg() {
     if (ffmpegLoaded) return;
-    if (typeof FFmpeg === 'undefined' || !FFmpeg.createFFmpeg) {
-      setLoadStatus('\u274c FFmpeg script not loaded yet — please refresh the page.');
+
+    if (typeof FFmpegWASM === 'undefined' || typeof FFmpegUtil === 'undefined') {
+      setLoadStatus('\u274c FFmpeg scripts not loaded yet \u2014 please refresh the page.');
       return;
     }
 
-    setLoadStatus('\u23f3 Downloading engine\u2026 (~25MB, cached after first use)');
+    setLoadStatus('\u23f3 Downloading engine\u2026 (~25\u202fMB, cached after first use)');
     if (ffmpegLoadBtn) ffmpegLoadBtn.disabled = true;
 
     try {
-      const { createFFmpeg } = FFmpeg;
+      const { FFmpeg }              = FFmpegWASM;
+      const { toBlobURL }           = FFmpegUtil;
+      const BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
 
-      ffmpeg = createFFmpeg({
-        log: false,
-        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
-        progress: ({ ratio }) => {
-          if (ratio > 0 && ratio < 1) {
-            setStatus('\u23fa Processing\u2026 ' + Math.round(ratio * 100) + '%');
-          }
-        },
+      ffmpeg = new FFmpeg();
+
+      // Progress events (v0.12 uses .on() not a constructor option)
+      ffmpeg.on('progress', ({ progress }) => {
+        if (progress > 0 && progress < 1) {
+          setStatus('\u23fa Processing\u2026 ' + Math.round(progress * 100) + '%');
+        }
       });
 
-      await ffmpeg.load();
+      // Fetch core + wasm as blobs — avoids CORS issues on GitHub Pages
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${BASE}/ffmpeg-core.js`,   'text/javascript'),
+        wasmURL: await toBlobURL(`${BASE}/ffmpeg-core.wasm`, 'application/wasm'),
+      });
 
       ffmpegLoaded = true;
       setLoadStatus('\u2705 Engine ready \u2014 load a video and audio to begin');
@@ -84,7 +94,7 @@
     } catch (err) {
       setLoadStatus('\u274c Failed to load engine: ' + err.message);
       if (ffmpegLoadBtn) {
-        ffmpegLoadBtn.disabled   = false;
+        ffmpegLoadBtn.disabled    = false;
         ffmpegLoadBtn.textContent = '\u21ba Retry Load';
       }
       console.error('[mixer] ffmpeg load error:', err);
@@ -169,6 +179,12 @@
   }
 
   // ── Export ─────────────────────────────────────
+  // v0.12 API changes vs v0.11:
+  //   ffmpeg.FS('writeFile', name, data)  →  await ffmpeg.writeFile(name, data)
+  //   ffmpeg.FS('readFile',  name)        →  await ffmpeg.readFile(name)
+  //   ffmpeg.FS('unlink',    name)        →  await ffmpeg.deleteFile(name)
+  //   ffmpeg.run(...args)                 →  await ffmpeg.exec([...args])
+  //   FFmpeg.fetchFile(file)              →  FFmpegUtil.fetchFile(file)
   async function exportMp4() {
     if (!videoFile || !audioFile || !ffmpegLoaded || isExporting) return;
     if (previewAudio) { previewAudio.pause(); previewAudio = null; }
@@ -177,7 +193,7 @@
     if (exportMp4Btn) exportMp4Btn.disabled = true;
     if (previewBtn)   previewBtn.disabled   = true;
 
-    const { fetchFile } = FFmpeg;
+    const { fetchFile } = FFmpegUtil;
     const videoExt = (videoFile.name.split('.').pop() || 'webm').toLowerCase();
     const audioExt = (audioFile.name.split('.').pop() || 'mp3').toLowerCase();
     const vName    = 'input.' + videoExt;
@@ -185,14 +201,14 @@
 
     try {
       setStatus('\u23fa Loading video\u2026');
-      ffmpeg.FS('writeFile', vName, await fetchFile(videoFile));
+      await ffmpeg.writeFile(vName, await fetchFile(videoFile));
 
       setStatus('\u23fa Loading audio\u2026');
-      ffmpeg.FS('writeFile', aName, await fetchFile(audioFile));
+      await ffmpeg.writeFile(aName, await fetchFile(audioFile));
 
       setStatus('\u23fa Merging\u2026');
 
-      // Build ffmpeg command
+      // Build ffmpeg command array
       const args = ['-i', vName];
       if (audioOffset > 0) args.push('-itsoffset', String(audioOffset));
       if (loopAudio)       args.push('-stream_loop', '-1');
@@ -202,10 +218,10 @@
       if (volume !== 1.0)  args.push('-af', 'volume=' + volume.toFixed(2));
       args.push('-shortest', '-y', 'output.mp4');
 
-      await ffmpeg.run(...args);
+      await ffmpeg.exec(args);
 
       setStatus('\u23fa Packaging\u2026');
-      const data = ffmpeg.FS('readFile', 'output.mp4');
+      const data = await ffmpeg.readFile('output.mp4');
       const blob = new Blob([data.buffer], { type: 'video/mp4' });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
@@ -215,9 +231,9 @@
       setTimeout(() => URL.revokeObjectURL(url), 5000);
 
       // Clean up virtual FS
-      try { ffmpeg.FS('unlink', vName);       } catch (_) {}
-      try { ffmpeg.FS('unlink', aName);       } catch (_) {}
-      try { ffmpeg.FS('unlink', 'output.mp4'); } catch (_) {}
+      try { await ffmpeg.deleteFile(vName);        } catch (_) {}
+      try { await ffmpeg.deleteFile(aName);        } catch (_) {}
+      try { await ffmpeg.deleteFile('output.mp4'); } catch (_) {}
 
       setStatus('\u2705 Export complete \u2014 3c-carousel-mix.mp4 downloaded!');
 
@@ -285,8 +301,8 @@
     if (previewAudio) previewAudio.loop = loopAudio;
   });
 
-  if (previewBtn)   previewBtn.addEventListener('click', previewMix);
-  if (exportMp4Btn) exportMp4Btn.addEventListener('click', exportMp4);
+  if (previewBtn)    previewBtn.addEventListener('click', previewMix);
+  if (exportMp4Btn)  exportMp4Btn.addEventListener('click', exportMp4);
   if (ffmpegLoadBtn) ffmpegLoadBtn.addEventListener('click', loadFFmpeg);
 
   // Auto-load when mixer tab is opened
