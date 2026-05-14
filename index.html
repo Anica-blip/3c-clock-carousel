@@ -226,14 +226,15 @@
 
   <!-- ─────────────────────────────────────────────────────
        Scripts — load order matters:
-       1. app.js         (carousel logic, tab switching)
-       2. ffmpeg.js      (v0.12 UMD → global FFmpegWASM)
-       3. ffmpeg/util    (v0.12 util → global FFmpegUtil, provides fetchFile + toBlobURL)
-       4. mixer.js       (reads FFmpegWASM + FFmpegUtil globals)
+       1. app.js          (carousel logic, tab switching)
+       2. ffmpeg/ffmpeg.js       (v0.12 UMD → global FFmpegWASM, self-hosted)
+       3. ffmpeg/ffmpeg-util.js  (v0.12 util → global FFmpegUtil, self-hosted)
+       4. mixer.js        (reads FFmpegWASM + FFmpegUtil globals)
+       Self-hosted in /ffmpeg/ to avoid GitHub Pages cross-origin chunk errors.
   ───────────────────────────────────────────────────── -->
   <script src="app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+  <script src="ffmpeg/ffmpeg.js"></script>
+  <script src="ffmpeg/ffmpeg-util.js"></script>
   <script src="mixer.js"></script>
 </body>
 </html>
