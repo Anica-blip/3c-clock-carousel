@@ -162,12 +162,7 @@
             </div>
           </div>
 
-          <!-- FFmpeg Engine -->
-          <div class="ffmpeg-engine">
-            <div class="divider"></div>
-            <button class="btn btn-ghost btn-sm" id="ffmpegLoadBtn">⚙ Load Mixer Engine</button>
-            <p class="ffmpeg-load-status" id="ffmpegLoadStatus">Engine loads automatically when you switch to this tab.</p>
-          </div>
+
         </section>
 
         <!-- Preview + Export Panel -->
@@ -208,7 +203,7 @@
 
           <div class="mixer-actions">
             <button class="btn btn-secondary" id="mixerPreviewBtn" disabled>▶ Preview Mix</button>
-            <button class="btn btn-mp4" id="exportMp4Btn" disabled>⬇ Export MP4</button>
+            <button class="btn btn-export" id="exportMp4Btn" disabled>⬇ Export Video</button>
           </div>
 
           <div class="export-status" id="mixerStatus"></div>
@@ -224,17 +219,7 @@
 
   </div>
 
-  <!-- ─────────────────────────────────────────────────────
-       Scripts — load order matters:
-       1. app.js          (carousel logic, tab switching)
-       2. ffmpeg/ffmpeg.js       (v0.12 UMD → global FFmpegWASM, self-hosted)
-       3. ffmpeg/ffmpeg-util.js  (v0.12 util → global FFmpegUtil, self-hosted)
-       4. mixer.js        (reads FFmpegWASM + FFmpegUtil globals)
-       Self-hosted in /ffmpeg/ to avoid GitHub Pages cross-origin chunk errors.
-  ───────────────────────────────────────────────────── -->
   <script src="app.js"></script>
-  <script src="ffmpeg/ffmpeg.js"></script>
-  <script src="ffmpeg/ffmpeg-util.js"></script>
   <script src="mixer.js"></script>
 </body>
 </html>
