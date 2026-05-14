@@ -1,20 +1,16 @@
 /* ═══════════════════════════════════════════════
    3C Clock Carousel — mixer.js
-   Video + Audio Merger · ffmpeg.wasm v0.12
-   No SharedArrayBuffer required · GitHub Pages compatible
+   Video + Audio Merger
+   Canvas + Web Audio API + MediaRecorder
+   No WASM · No SharedArrayBuffer · No SIMD
+   Works in Firefox, Chrome, Edge
    3C Thread To Success™ Cooking Lab
 ═══════════════════════════════════════════════ */
-
-// ffmpeg.wasm v0.12 is loaded via <script> tags in index.html
-// Globals: FFmpegWASM  → { FFmpeg }
-//          FFmpegUtil  → { fetchFile, toBlobURL }
 
 (function () {
   'use strict';
 
   // ── State ───────────────────────────────────────
-  let ffmpeg       = null;
-  let ffmpegLoaded = false;
   let isExporting  = false;
   let videoFile    = null;
   let audioFile    = null;
@@ -46,62 +42,8 @@
   const offsetVal        = document.getElementById('mixerOffsetVal');
   const loopAudioToggle  = document.getElementById('mixerLoopAudio');
   const previewBtn       = document.getElementById('mixerPreviewBtn');
-  const exportMp4Btn     = document.getElementById('exportMp4Btn');
+  const exportBtn        = document.getElementById('exportMp4Btn');
   const mixerStatusEl    = document.getElementById('mixerStatus');
-  const ffmpegLoadBtn    = document.getElementById('ffmpegLoadBtn');
-  const ffmpegLoadStatus = document.getElementById('ffmpegLoadStatus');
-
-  // ── Load FFmpeg v0.12 ────────────────────────────
-  // v0.12 uses: new FFmpeg(), ffmpeg.load({ coreURL, wasmURL })
-  // No SharedArrayBuffer needed with the non-MT (single-thread) core.
-  // toBlobURL fetches the core/wasm via blob: to bypass GitHub Pages CORS.
-  async function loadFFmpeg() {
-    if (ffmpegLoaded) return;
-
-    if (typeof FFmpegWASM === 'undefined' || typeof FFmpegUtil === 'undefined') {
-      setLoadStatus('\u274c FFmpeg scripts not loaded yet \u2014 please refresh the page.');
-      return;
-    }
-
-    setLoadStatus('\u23f3 Downloading engine\u2026 (~25\u202fMB, cached after first use)');
-    if (ffmpegLoadBtn) ffmpegLoadBtn.disabled = true;
-
-    try {
-      const { FFmpeg }              = FFmpegWASM;
-      const { toBlobURL }           = FFmpegUtil;
-      // ffmpeg.js + 814.ffmpeg.js + ffmpeg-core.js: self-hosted (small, no chunk CSP error)
-      // ffmpeg-core.wasm: CDN via toBlobURL (fetch-based, not blocked by CSP; 31MB > GitHub 25MB limit)
-      const BASE_LOCAL = new URL('./ffmpeg', document.baseURI).href;
-      const BASE_CDN   = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-
-      ffmpeg = new FFmpeg();
-
-      // Progress events (v0.12 uses .on() not a constructor option)
-      ffmpeg.on('progress', ({ progress }) => {
-        if (progress > 0 && progress < 1) {
-          setStatus('\u23fa Processing\u2026 ' + Math.round(progress * 100) + '%');
-        }
-      });
-
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${BASE_LOCAL}/ffmpeg-core.js`,  'text/javascript'),
-        wasmURL: await toBlobURL(`${BASE_CDN}/ffmpeg-core.wasm`,  'application/wasm'),
-      });
-
-      ffmpegLoaded = true;
-      setLoadStatus('\u2705 Engine ready \u2014 load a video and audio to begin');
-      if (ffmpegLoadBtn) ffmpegLoadBtn.hidden = true;
-      updateExportBtn();
-
-    } catch (err) {
-      setLoadStatus('\u274c Failed to load engine: ' + err.message);
-      if (ffmpegLoadBtn) {
-        ffmpegLoadBtn.disabled    = false;
-        ffmpegLoadBtn.textContent = '\u21ba Retry Load';
-      }
-      console.error('[mixer] ffmpeg load error:', err);
-    }
-  }
 
   // ── File Handlers ──────────────────────────────
   function handleVideoFile(file) {
@@ -181,85 +123,155 @@
   }
 
   // ── Export ─────────────────────────────────────
-  // v0.12 API changes vs v0.11:
-  //   ffmpeg.FS('writeFile', name, data)  →  await ffmpeg.writeFile(name, data)
-  //   ffmpeg.FS('readFile',  name)        →  await ffmpeg.readFile(name)
-  //   ffmpeg.FS('unlink',    name)        →  await ffmpeg.deleteFile(name)
-  //   ffmpeg.run(...args)                 →  await ffmpeg.exec([...args])
-  //   FFmpeg.fetchFile(file)              →  FFmpegUtil.fetchFile(file)
-  async function exportMp4() {
-    if (!videoFile || !audioFile || !ffmpegLoaded || isExporting) return;
+  async function exportVideo() {
+    if (!videoFile || !audioFile || isExporting) return;
     if (previewAudio) { previewAudio.pause(); previewAudio = null; }
 
     isExporting = true;
-    if (exportMp4Btn) exportMp4Btn.disabled = true;
-    if (previewBtn)   previewBtn.disabled   = true;
+    if (exportBtn)  exportBtn.disabled  = true;
+    if (previewBtn) previewBtn.disabled = true;
 
-    const { fetchFile } = FFmpegUtil;
-    const videoExt = (videoFile.name.split('.').pop() || 'webm').toLowerCase();
-    const audioExt = (audioFile.name.split('.').pop() || 'mp3').toLowerCase();
-    const vName    = 'input.' + videoExt;
-    const aName    = 'input.' + audioExt;
+    setStatus('\u23fa Setting up export\u2026');
+
+    let audioCtx      = null;
+    let animFrame     = null;
+    let progressTimer = null;
 
     try {
-      setStatus('\u23fa Loading video\u2026');
-      await ffmpeg.writeFile(vName, await fetchFile(videoFile));
+      // 1. Load video
+      const vid = document.createElement('video');
+      vid.src   = videoBlobURL;
+      vid.muted = true;
+      await new Promise((res, rej) => {
+        vid.onloadedmetadata = res;
+        vid.onerror = () => rej(new Error('Video failed to load'));
+      });
 
-      setStatus('\u23fa Loading audio\u2026');
-      await ffmpeg.writeFile(aName, await fetchFile(audioFile));
+      const W = vid.videoWidth  || 540;
+      const H = vid.videoHeight || 960;
 
-      setStatus('\u23fa Merging\u2026');
+      // 2. Export canvas
+      const canvas = document.createElement('canvas');
+      canvas.width  = W;
+      canvas.height = H;
+      const ctx2d   = canvas.getContext('2d');
 
-      // Build ffmpeg command array
-      const args = ['-i', vName];
-      if (audioOffset > 0) args.push('-itsoffset', String(audioOffset));
-      if (loopAudio)       args.push('-stream_loop', '-1');
-      args.push('-i', aName);
-      args.push('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23');
-      args.push('-c:a', 'aac', '-b:a', '192k');
-      if (volume !== 1.0)  args.push('-af', 'volume=' + volume.toFixed(2));
-      args.push('-shortest', '-y', 'output.mp4');
+      // 3. Web Audio
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const audioData   = await fetch(audioBlobURL).then(r => r.arrayBuffer());
+      const audioBuffer = await audioCtx.decodeAudioData(audioData);
 
-      await ffmpeg.exec(args);
+      const gainNode  = audioCtx.createGain();
+      gainNode.gain.value = Math.min(2, volume);
+      const audioDest = audioCtx.createMediaStreamDestination();
+      gainNode.connect(audioDest);
 
+      // 4. Combined stream
+      const videoStream    = canvas.captureStream(30);
+      const combinedStream = new MediaStream([
+        ...videoStream.getVideoTracks(),
+        ...audioDest.stream.getAudioTracks(),
+      ]);
+
+      // 5. MediaRecorder
+      const mimeType = getSupportedMime();
+      const recorder = new MediaRecorder(
+        combinedStream,
+        mimeType ? { mimeType, videoBitsPerSecond: 5000000 } : {}
+      );
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+      // 6. Draw loop
+      const drawFrame = () => {
+        if (vid.paused || vid.ended) return;
+        ctx2d.drawImage(vid, 0, 0, W, H);
+        animFrame = requestAnimationFrame(drawFrame);
+      };
+
+      // 7. Start
+      recorder.start(100);
+      vid.currentTime = 0;
+      await vid.play();
+      drawFrame();
+
+      // 8. Audio
+      const startAudio = () => {
+        const src  = audioCtx.createBufferSource();
+        src.buffer = audioBuffer;
+        src.loop   = loopAudio;
+        src.connect(gainNode);
+        src.start(audioCtx.currentTime);
+      };
+      audioOffset > 0 ? setTimeout(startAudio, audioOffset * 1000) : startAudio();
+
+      // 9. Progress
+      const duration = vid.duration || 1;
+      progressTimer = setInterval(() => {
+        const pct = Math.round((vid.currentTime / duration) * 100);
+        setStatus('\u23fa Exporting\u2026 ' + pct + '%');
+      }, 250);
+
+      // 10. Wait for end
+      await new Promise(res => { vid.onended = res; });
+
+      clearInterval(progressTimer); progressTimer = null;
+      cancelAnimationFrame(animFrame); animFrame = null;
+      ctx2d.drawImage(vid, 0, 0, W, H);
+      await new Promise(res => setTimeout(res, 300));
+
+      recorder.stop();
+      await new Promise(res => { recorder.onstop = res; });
+      await audioCtx.close(); audioCtx = null;
+
+      // 11. Download
       setStatus('\u23fa Packaging\u2026');
-      const data = await ffmpeg.readFile('output.mp4');
-      const blob = new Blob([data.buffer], { type: 'video/mp4' });
+      const ext  = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
-      a.download = '3c-carousel-mix.mp4';
+      a.download = '3c-carousel-mix.' + ext;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
 
-      // Clean up virtual FS
-      try { await ffmpeg.deleteFile(vName);        } catch (_) {}
-      try { await ffmpeg.deleteFile(aName);        } catch (_) {}
-      try { await ffmpeg.deleteFile('output.mp4'); } catch (_) {}
-
-      setStatus('\u2705 Export complete \u2014 3c-carousel-mix.mp4 downloaded!');
+      setStatus('\u2705 Export complete \u2014 3c-carousel-mix.' + ext + ' downloaded!');
 
     } catch (err) {
       setStatus('\u274c Export failed: ' + err.message);
       console.error('[mixer] export error:', err);
     } finally {
+      if (progressTimer) clearInterval(progressTimer);
+      if (animFrame)     cancelAnimationFrame(animFrame);
+      if (audioCtx)      audioCtx.close().catch(() => {});
       isExporting = false;
       updateExportBtn();
       if (previewBtn) previewBtn.disabled = !(videoFile && audioFile);
     }
   }
 
-  // ── UI Helpers ─────────────────────────────────
+  // ── Helpers ────────────────────────────────────
+  function getSupportedMime() {
+    const types = [
+      'video/mp4;codecs=avc1',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+    ];
+    for (const t of types)
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) return t;
+    return 'video/webm';
+  }
+
   function updateExportBtn() {
-    if (exportMp4Btn) exportMp4Btn.disabled = !(videoFile && audioFile && ffmpegLoaded && !isExporting);
+    if (exportBtn) exportBtn.disabled = !(videoFile && audioFile && !isExporting);
   }
   function updatePreviewBtn() {
     if (previewBtn) previewBtn.disabled = !(videoFile && audioFile);
   }
-  function setStatus(msg)     { if (mixerStatusEl)    mixerStatusEl.textContent    = msg; }
-  function setLoadStatus(msg) { if (ffmpegLoadStatus) ffmpegLoadStatus.textContent = msg; }
+  function setStatus(msg) { if (mixerStatusEl) mixerStatusEl.textContent = msg; }
 
-  // ── Drop Zone Helpers ───────────────────────────
+  // ── Drop Zones ──────────────────────────────────
   function setupDropZone(zone, onFile) {
     if (!zone) return;
     zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
@@ -270,12 +282,12 @@
     });
   }
 
-  // ── Event Listeners ─────────────────────────────
+  // ── Events ──────────────────────────────────────
   setupDropZone(videoDropZone, handleVideoFile);
   setupDropZone(audioDropZone, handleAudioFile);
 
-  if (videoDropZone)   videoDropZone.addEventListener('click', () => videoFileInput && videoFileInput.click());
-  if (audioDropZone)   audioDropZone.addEventListener('click', () => audioFileInput && audioFileInput.click());
+  if (videoDropZone) videoDropZone.addEventListener('click', () => videoFileInput && videoFileInput.click());
+  if (audioDropZone) audioDropZone.addEventListener('click', () => audioFileInput && audioFileInput.click());
 
   if (videoFileInput) videoFileInput.addEventListener('change', () => {
     if (videoFileInput.files[0]) handleVideoFile(videoFileInput.files[0]);
@@ -303,13 +315,7 @@
     if (previewAudio) previewAudio.loop = loopAudio;
   });
 
-  if (previewBtn)    previewBtn.addEventListener('click', previewMix);
-  if (exportMp4Btn)  exportMp4Btn.addEventListener('click', exportMp4);
-  if (ffmpegLoadBtn) ffmpegLoadBtn.addEventListener('click', loadFFmpeg);
-
-  // Auto-load when mixer tab is opened
-  document.addEventListener('mixerTabOpened', () => {
-    if (!ffmpegLoaded) loadFFmpeg();
-  });
+  if (previewBtn) previewBtn.addEventListener('click', previewMix);
+  if (exportBtn)  exportBtn.addEventListener('click', exportVideo);
 
 }());
