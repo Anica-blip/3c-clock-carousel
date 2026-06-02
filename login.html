@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>3C Tools — Access</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; }
+
+    body {
+      background: #3b1f5e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Open Sans', sans-serif;
+    }
+
+    /* ── Login card ── */
+    .login-card {
+      width: min(420px, 90vw);
+      padding: 40px 36px 32px;
+      background: #2d1650;
+      border-radius: 18px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.45);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      text-align: center;
+    }
+
+    /* ── Logo ── */
+    .logo-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.25);
+      overflow: hidden;
+      margin-bottom: 4px;
+      background: #1a0b2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* ── Text ── */
+    .card-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 0.01em;
+    }
+
+    .card-sub {
+      font-size: 0.95rem;
+      color: rgba(196,181,245,0.65);
+      line-height: 1.5;
+      margin-top: -4px;
+    }
+
+    /* ── GitHub button — matches existing 3C style ── */
+    .btn-github {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 15px 20px;
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      border: none;
+      border-radius: 50px;
+      color: #ffffff;
+      font-family: 'Open Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.45);
+    }
+
+    .btn-github:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(124,58,237,0.65);
+    }
+
+    .btn-github:active:not(:disabled) { transform: scale(0.97); }
+    .btn-github:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .btn-github svg {
+      width: 18px;
+      height: 18px;
+      fill: #ffffff;
+      flex-shrink: 0;
+    }
+
+    /* ── Status message ── */
+    .status-msg {
+      font-size: 0.73rem;
+      color: rgba(196,181,245,0.5);
+      min-height: 18px;
+      line-height: 1.5;
+      transition: color 0.2s;
+    }
+
+    .status-msg.error   { color: #f87171; }
+    .status-msg.success { color: #86efac; }
+    .status-msg.loading {
+      color: rgba(168,85,247,0.9);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    /* ── Loading overlay ── */
+    #loadingOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: #3b1f5e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-dot-row { display: flex; gap: 8px; }
+
+    .loading-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #a855f7;
+      animation: dotBounce 1.4s ease-in-out infinite;
+    }
+
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+      40%            { transform: scale(1);   opacity: 1;   }
+    }
+
+    /* ── Watermark ── */
+    .watermark {
+      margin-top: 20px;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      line-height: 1.5;
+      padding: 0 12px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50%       { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay">
+    <div class="loading-dot-row">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+  </div>
+
+  <!-- Login card -->
+  <div class="login-card" id="loginCard" style="display:none;">
+    <div class="logo-wrap">
+      <img src="3C%20Thread%20To%20Success%20logo.png" alt="3C Logo" />
+    </div>
+    <div class="card-title">3C Tools Access</div>
+    <div class="card-sub">Creator workspace — authorised access only.</div>
+
+    <button class="btn-github" id="btnGithub">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+      </svg>
+      GitHub Access Connection
+    </button>
+
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <div class="watermark">Designed and Built with ❤️ by Claude (Anthropic) × Chef Anica · 3C Thread To Success™ Cooking Lab 🧪👨‍🍳</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   login.html — 3C Tools Central Login
+   GitHub OAuth via Supabase · Per-repo, shared session
+   Built by Claude (Anthropic) × Chef Anica · 3C Thread To Success™
+═══════════════════════════════════════════════════════════════════════════ */
+
+  // ─── CONFIG ───────────────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://cgxjqsbrditbteqhdyus.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNneGpxc2JyZGl0YnRlcWhkeXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMTY1ODEsImV4cCI6MjA2NjY5MjU4MX0.xUDy5ic-r52kmRtocdcW8Np9-lczjMZ6YKPXc03rIG4';   // ← Settings → API → anon public
+  const REDIRECT_TO  = 'https://anica-blip.github.io/3c-clock-carousel/login.html';
+  const FALLBACK_URL = 'https://anica-blip.github.io/3c-clock-carousel/index.html';
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const client         = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const loginCard      = document.getElementById('loginCard');
+  const statusMsg      = document.getElementById('statusMsg');
+  const btnGithub      = document.getElementById('btnGithub');
+
+  function showLoginCard(msg, cls) {
+    loadingOverlay.style.display = 'none';
+    loginCard.style.display = 'flex';
+    if (msg) setStatus(msg, cls);
+  }
+
+  function setStatus(msg, cls) {
+    statusMsg.textContent = msg;
+    statusMsg.className   = 'status-msg' + (cls ? ' ' + cls : '');
+  }
+
+  function getNextUrl() {
+    const stored = sessionStorage.getItem('auth_next');
+    if (stored) { sessionStorage.removeItem('auth_next'); return stored; }
+    const param = new URLSearchParams(location.search).get('next');
+    return param ? decodeURIComponent(param) : FALLBACK_URL;
+  }
+
+  function handleAuthorized(session) {
+    setTimeout(() => window.location.replace(getNextUrl()), 600);
+  }
+
+  client.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) handleAuthorized(session);
+  });
+
+  (async function init() {
+    const { data: { session } } = await client.auth.getSession();
+    if (session) { handleAuthorized(session); return; }
+    showLoginCard();
+  })();
+
+  btnGithub.addEventListener('click', async () => {
+    btnGithub.disabled = true;
+    setStatus('Redirecting to GitHub…', 'loading');
+    const nextParam = new URLSearchParams(location.search).get('next');
+    if (nextParam) sessionStorage.setItem('auth_next', decodeURIComponent(nextParam));
+    const { error } = await client.auth.signInWithOAuth({
+      provider: 'github',
+      options:  { redirectTo: REDIRECT_TO }
+    });
+    if (error) {
+      btnGithub.disabled = false;
+      setStatus('Login failed — please try again.', 'error');
+    }
+  });
+
+</script>
+</body>
+</html>
